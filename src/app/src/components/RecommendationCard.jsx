@@ -5,7 +5,9 @@ export default function RecommendationCard({ item, rec, lang, t, onApprove, onRe
   const [expanded, setExpanded] = useState(false)
 
   const name = lang === 'fr' ? item.name_fr : item.name_nl
-  const displayName = name.length > 42 ? name.slice(0, 42) + '…' : name
+  const displayName = name.length > 42
+    ? name.slice(0, 42).replace(/\s+\S*$/, '') + '…'
+    : name
 
   const discountColor = rec.discount_pct >= 0.40
     ? 'bg-red-100 text-red-700'
