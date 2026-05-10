@@ -1,5 +1,11 @@
 # Local Setup — Phase 1 (Mock Demo)
 
+## Production Deploy
+
+**https://app-blond-ten-78.vercel.app**
+
+Also accessible at: https://app-eo4lso6y4-seredayu-2173s-projects.vercel.app
+
 ## Prerequisites
 
 - Node.js 20+
