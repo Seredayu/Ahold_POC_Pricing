@@ -5,10 +5,11 @@ export default function ConfirmationBanner({ message, subMessage, onUndo, t }) {
   const [undoActive, setUndoActive] = useState(true)
 
   useEffect(() => {
-    const undoTimer = setTimeout(() => setUndoActive(false), 30000)
-    const hideTimer = setTimeout(() => setVisible(false), 5000)
+    const delay = onUndo ? 30000 : 5000
+    const undoTimer = setTimeout(() => setUndoActive(false), delay)
+    const hideTimer = setTimeout(() => setVisible(false), delay)
     return () => { clearTimeout(undoTimer); clearTimeout(hideTimer) }
-  }, [])
+  }, [onUndo])
 
   if (!visible) return null
 

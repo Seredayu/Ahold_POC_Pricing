@@ -44,15 +44,15 @@ export default function DetailView({ item, rec, lang, t, onApprove, onReject, on
 
       <div className="grid grid-cols-3 gap-3 mb-4 text-center">
         <div className="bg-slate-50 rounded-xl p-3">
-          <p className="text-xs text-slate-500 mb-1">Stock</p>
+          <p className="text-xs text-slate-500 mb-1">{t.detailStock}</p>
           <p className="font-semibold text-slate-900 text-sm">{t.stockLabel(item.stock)}</p>
         </div>
         <div className="bg-slate-50 rounded-xl p-3">
-          <p className="text-xs text-slate-500 mb-1">Expiry</p>
+          <p className="text-xs text-slate-500 mb-1">{t.detailExpiry}</p>
           <p className="font-semibold text-slate-900 text-sm">{t.expiryLabel(item.hours_to_close)}</p>
         </div>
         <div className="bg-slate-50 rounded-xl p-3">
-          <p className="text-xs text-slate-500 mb-1">AI</p>
+          <p className="text-xs text-slate-500 mb-1">{t.detailAI}</p>
           <p className={`font-semibold text-sm ${confidenceColor}`}>{t.confidence(rec.confidence)}</p>
         </div>
       </div>
