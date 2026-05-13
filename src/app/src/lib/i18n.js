@@ -24,6 +24,9 @@ const strings = {
     confidence: (score) => `${Math.round(score * 100)}\u00a0% confiance`,
     expiryLabel: (h) => `Expire dans ${h}h`,
     stockLabel: (n) => `${n} unités`,
+    detailStock: 'Stock',
+    detailExpiry: 'Expiration',
+    detailAI: 'Confiance IA',
     langToggle: 'NL',
   },
   nl: {
@@ -48,6 +51,9 @@ const strings = {
     confidence: (score) => `${Math.round(score * 100)}\u00a0% betrouwbaarheid`,
     expiryLabel: (h) => `Vervalt in ${h}u`,
     stockLabel: (n) => `${n} stuks`,
+    detailStock: 'Stock',
+    detailExpiry: 'Vervaldatum',
+    detailAI: 'IA betrouwbaarheid',
     langToggle: 'FR',
   },
 }

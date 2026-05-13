@@ -41,8 +41,8 @@ export const MOCK_ITEMS = [
   },
   {
     item_id: 'SKU-005',
-    name_fr: 'Aardbeien biologisch gewassen 500g klasse II Delhaize',
-    name_nl: 'Aardbeien biologisch gewassen 500g klasse II Delhaize',
+    name_fr: 'Pain de campagne 400g',
+    name_nl: 'Boerenbrood 400g',
     current_price: 2.49,
     stock: 31,
     hours_to_close: 4,
