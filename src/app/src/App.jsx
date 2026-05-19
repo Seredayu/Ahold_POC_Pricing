@@ -3,27 +3,25 @@ import RecommendationCard from './components/RecommendationCard'
 import ConfirmationBanner from './components/ConfirmationBanner'
 import EmptyState from './components/EmptyState'
 import ErrorState from './components/ErrorState'
-import { MOCK_ITEMS } from './lib/mockData'
-import { getRecommendation } from './lib/decisionTable'
-import { postApprove, postReject } from './lib/api'
+import { fetchItems, postApprove, postReject } from './lib/api'
 import strings from './lib/i18n'
-
-function buildQueue(items) {
-  return items
-    .map(item => ({ item, rec: getRecommendation(item) }))
-    .filter(({ rec }) => rec.recommended)
-    .sort((a, b) => a.item.hours_to_close - b.item.hours_to_close)
-}
 
 export default function App() {
   const [lang, setLang] = useState('fr')
   const t = strings[lang]
 
-  const [queue] = useState(() => buildQueue(MOCK_ITEMS))
+  const [queue, setQueue] = useState([])
+  const [loading, setLoading] = useState(true)
   const [dismissed, setDismissed] = useState(new Set())
   const [banner, setBanner] = useState(null)
   const [error, setError] = useState(false)
   const [offline, setOffline] = useState(!navigator.onLine)
+
+  useEffect(() => {
+    fetchItems()
+      .then(items => { setQueue(items); setLoading(false) })
+      .catch(() => { setError(true); setLoading(false) })
+  }, [])
 
   useEffect(() => {
     const on = () => setOffline(false)
@@ -82,7 +80,13 @@ export default function App() {
   function handleRetry() {
     setError(false)
     setDismissed(new Set())
+    setLoading(true)
+    fetchItems()
+      .then(items => { setQueue(items); setLoading(false) })
+      .catch(() => { setError(true); setLoading(false) })
   }
+
+  const visibleQueue = queue.filter(({ item }) => !dismissed.has(item.item_id))
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -106,6 +110,10 @@ export default function App() {
       <main className="max-w-lg mx-auto px-4 py-4 space-y-3">
         {error ? (
           <ErrorState t={t} onRetry={handleRetry} />
+        ) : loading ? (
+          <div className="flex justify-center py-16">
+            <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin" />
+          </div>
         ) : visibleQueue.length === 0 ? (
           <EmptyState t={t} />
         ) : (

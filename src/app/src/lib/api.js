@@ -3,6 +3,12 @@ const BASE = import.meta.env.VITE_API_URL || '/api'
 // Track approved items to enforce idempotency client-side.
 const approved = new Set()
 
+export async function fetchItems() {
+  const res = await fetch(`${BASE}/items`)
+  if (!res.ok) throw new Error(`${res.status}`)
+  return res.json()
+}
+
 export async function postApprove(item_id, discount_pct, manager_override = false) {
   if (approved.has(item_id)) {
     return { status: 'already_applied', condition_record: null }
