@@ -7,7 +7,27 @@ app.use(express.json())
 
 const PORT = process.env.PORT || 3001
 
-// Track approved items for idempotency
+// Phase 2B: set BTP_ENABLED=true to route through SAP BTP Cloud Connector.
+// Requires all BTP_* env vars (see btp-client.js).
+// Default false = Phase 2A mock behaviour preserved.
+const BTP_ENABLED = process.env.BTP_ENABLED === 'true'
+
+if (BTP_ENABLED) {
+  console.log('SAP BTP write-back ENABLED — routing through BAPI_PRICES_CONDITIONS')
+} else {
+  console.log('SAP BTP write-back DISABLED — mock ZMKD responses active')
+}
+
+// Lazy-load BTP client only when enabled (avoids import errors when env vars absent)
+let _btpClient = null
+async function getBtpClient() {
+  if (!_btpClient) {
+    _btpClient = await import('./btp-client.js')
+  }
+  return _btpClient
+}
+
+// Track approved items for idempotency (in-memory; Redis in production)
 const approved = new Set()
 
 function zmkdConditionRecord() {
@@ -20,8 +40,8 @@ function isoDate(offsetDays = 0) {
   return d.toISOString().split('T')[0]
 }
 
-app.post('/api/approve', (req, res) => {
-  const { item_id, discount_pct, manager_override = false } = req.body
+app.post('/api/approve', async (req, res) => {
+  const { item_id, discount_pct, manager_override = false, store_id = 'BE01' } = req.body
 
   if (!item_id || discount_pct === undefined) {
     return res.status(400).json({ error: 'item_id and discount_pct required' })
@@ -36,16 +56,38 @@ app.post('/api/approve', (req, res) => {
     return res.json({ status: 'already_applied', condition_record: null })
   }
 
-  approved.add(item_id)
+  const valid_from = isoDate(0)
+  const valid_to   = isoDate(1)
 
+  if (BTP_ENABLED) {
+    try {
+      const { callBapiPricesConditions } = await getBtpClient()
+      const bapi = await callBapiPricesConditions({
+        item_id, store_id, discount_pct, valid_from, valid_to,
+      })
+      approved.add(item_id)
+      return res.json({ ...bapi, discount_pct, valid_from, valid_to })
+    } catch (err) {
+      console.error('BAPI_PRICES_CONDITIONS error:', err.message)
+      // A004 lock or transient error — surface to manager, never silent success
+      return res.status(502).json({
+        error:   'bapi_error',
+        message: err.message,
+        hint:    'Mise a jour en attente — reessayer dans 30s.',
+      })
+    }
+  }
+
+  // Phase 2A mock path
+  approved.add(item_id)
   res.json({
-    status: 'zmkd_queued',
+    status:           'zmkd_queued',
     condition_record: zmkdConditionRecord(),
-    condition_type: 'ZMKD',
-    table: 'A004',
+    condition_type:   'ZMKD',
+    table:            'A004',
     discount_pct,
-    valid_from: isoDate(0),
-    valid_to: isoDate(1),
+    valid_from,
+    valid_to,
   })
 })
 
@@ -60,5 +102,5 @@ app.post('/api/reject', (req, res) => {
 })
 
 app.listen(PORT, () => {
-  console.log(`Mock BFF running on http://localhost:${PORT}`)
+  console.log(`BFF running on http://localhost:${PORT} (BTP_ENABLED=${BTP_ENABLED})`)
 })

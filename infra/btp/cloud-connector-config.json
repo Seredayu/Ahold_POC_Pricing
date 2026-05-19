@@ -1,0 +1,82 @@
+{
+  "_comment": "SAP BTP Cloud Connector configuration template for Belgium Delhaize ECC 6.0",
+  "_docs": "https://help.sap.com/docs/connectivity/sap-btp-connectivity-cf/cloud-connector",
+
+  "subaccount": {
+    "region_host": "eu10.hana.ondemand.com",
+    "subaccount_id": "<BTP_SUBACCOUNT_ID>",
+    "display_name": "Ahold POC Pricing — Belgium Delhaize"
+  },
+
+  "system_mappings": [
+    {
+      "virtual_host": "ecc-be.internal",
+      "virtual_port": 3300,
+      "internal_host": "<SAP_ECC_APP_SERVER_IP>",
+      "internal_port": 3300,
+      "protocol": "RFC",
+      "description": "SAP ECC 6.0 RFC — Belgium Delhaize production",
+      "back_end_type": "SAP_System",
+      "sap_system_id": "<SAP_SID>",
+
+      "resources": [
+        {
+          "url": "/",
+          "description": "Allow all RFC function modules (restrict in production)",
+          "active": true,
+          "accessible": true,
+          "web_socket_upgrade_allowed": false
+        }
+      ],
+
+      "principal_propagation": false,
+      "tls": {
+        "enabled": true,
+        "certificate_validity_days": 365
+      }
+    }
+  ],
+
+  "btp_destination": {
+    "name": "ECC-RFC-BE",
+    "type": "RFC",
+    "proxy_type": "OnPremise",
+    "authentication": "BasicAuthentication",
+    "description": "SAP ECC 6.0 RFC connection for BAPI_PRICES_CONDITIONS",
+    "additional_properties": {
+      "jco.client.client":         "<SAP_CLIENT>",
+      "jco.client.sysnr":          "<SAP_SYSTEM_NUMBER>",
+      "jco.client.r3name":         "<SAP_SID>",
+      "jco.client.group":          "PUBLIC",
+      "jco.client.lang":           "EN",
+      "jco.destination.peak_limit":"10",
+      "jco.destination.pool_capacity": "5"
+    }
+  },
+
+  "required_function_modules": [
+    {
+      "name": "BAPI_PRICES_CONDITIONS",
+      "purpose": "Create/update ZMKD condition records in A004",
+      "authorization_object": "V_KONH_VKS",
+      "note": "Confirm with SAP BASIS that RFC user has S_RFC authorization for this FM"
+    },
+    {
+      "name": "BAPI_TRANSACTION_COMMIT",
+      "purpose": "Commit BAPI_PRICES_CONDITIONS changes",
+      "authorization_object": "S_RFC"
+    }
+  ],
+
+  "setup_checklist": [
+    "Install SAP BTP Cloud Connector 2.x on Belgium Delhaize on-premise server",
+    "Pair Cloud Connector to BTP subaccount using subaccount_id above",
+    "Configure system mapping: ecc-be.internal -> SAP ECC app server",
+    "Create BTP Destination 'ECC-RFC-BE' with RFC credentials",
+    "Create RFC user in SAP ECC with S_RFC + V_KONH_VKS authorizations",
+    "Test RFC connectivity: BTP Connectivity Explorer -> ping ecc-be.internal:3300",
+    "Set BTP_ENABLED=true in Azure Container Apps environment variables",
+    "Set BTP_CLIENT_ID, BTP_CLIENT_SECRET in Key Vault / ACA secrets",
+    "Verify BAPI_PRICES_CONDITIONS call creates ZMKD record in A004 (SAP transaction VK13)"
+  ]
+}
