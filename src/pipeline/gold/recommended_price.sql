@@ -30,17 +30,18 @@ SELECT
     fl.shelf_life_hours,
 
     -- M2 placeholder: map shelf_life_hours to expiry_risk [0.0–1.0]
+    -- VFDAT is day-precision; shelf_life_hours = hours to end of expiry day.
     -- Replace with: CAST(AI_QUERY('ahold-m2-expiry-risk', ...) AS DOUBLE)
     -- after model is registered in Databricks Model Serving.
     CASE
-        WHEN fl.shelf_life_hours < 4 THEN 0.95
-        WHEN fl.shelf_life_hours < 6 THEN 0.75
-        WHEN fl.shelf_life_hours < 8 THEN 0.55
+        WHEN fl.shelf_life_hours < 24 THEN 0.95  -- expiring today
+        WHEN fl.shelf_life_hours < 48 THEN 0.75  -- expiring tomorrow
+        WHEN fl.shelf_life_hours < 72 THEN 0.55  -- expiring in 2 days
         ELSE 0.20
     END                         AS expiry_risk
 
 FROM LIVE.silver_freshness_ledger fl
-WHERE fl.shelf_life_hours < 8;
+WHERE fl.shelf_life_hours < 96;
 
 -- COMMAND ----------
 

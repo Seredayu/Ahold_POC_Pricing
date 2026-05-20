@@ -16,7 +16,8 @@ SELECT
     s.WERKS                                                         AS store_id,
     MIN(s.VFDAT)                                                    AS earliest_expiry_date,
     DATEDIFF(HOUR, current_timestamp(),
-        to_timestamp(MIN(s.VFDAT), 'yyyyMMdd'))                    AS shelf_life_hours,
+        CAST(date_add(to_date(MIN(s.VFDAT), 'yyyyMMdd'), 1) AS TIMESTAMP))
+                                                                    AS shelf_life_hours,
     MAX(s._cdc_ts)                                                  AS last_sled_update
 FROM LIVE.bronze_sled_records s
 WHERE s._cdc_op != 'D'

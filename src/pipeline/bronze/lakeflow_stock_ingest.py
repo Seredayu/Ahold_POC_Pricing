@@ -61,13 +61,14 @@ def _synthetic_stock():
 
 def _synthetic_sled():
     now = datetime.datetime.utcnow()
-    shelf_hours = [6, 3, 5, 7, 4, 4, 6, 6, 7, 5, 7, 3]
-    stocks      = [17, 8, 24, 12, 31, 11, 14, 19, 22, 16, 18, 28]
+    # Days from today: 3 expire today, 3 tomorrow, 4 in 2 days, 2 in 3 days
+    shelf_days = [0, 0, 0, 1, 1, 1, 2, 2, 2, 2, 3, 3]
+    stocks     = [17, 8, 24, 12, 31, 11, 14, 19, 22, 16, 18, 28]
     rows = [
         ("100", "BE01", "001", f"BIN-{i:04d}", f"SKU-{i:03d}", "BE01",
-         (datetime.date.today() + datetime.timedelta(hours=h)).strftime("%Y%m%d"),
+         (datetime.date.today() + datetime.timedelta(days=d)).strftime("%Y%m%d"),
          Decimal(str(s)), "ST", "I", now, now)
-        for i, (h, s) in enumerate(zip(shelf_hours, stocks), start=1)
+        for i, (d, s) in enumerate(zip(shelf_days, stocks), start=1)
     ]
     return spark.createDataFrame(rows, schema=SLED_SCHEMA)
 
