@@ -9,6 +9,7 @@
 
 import dlt
 import datetime
+from decimal import Decimal
 from pyspark.sql.types import (
     StructType, StructField,
     StringType, DecimalType, TimestampType
@@ -42,7 +43,7 @@ def _synthetic(batch_date: str):
     for i in range(1, 13):
         rows.append((
             f"00000{i:05d}", "000010", "100", "01",
-            "PR00", float(2.49 + i * 0.5), "EUR", "ST",
+            "PR00", Decimal(str(round(2.49 + i * 0.5, 2))), "EUR", "ST",
             batch_date.replace("-", ""), batch_date.replace("-", ""),
             f"SKU-{i:03d}", "BE01", "1000", "10",
             datetime.datetime.utcnow(), batch_date,

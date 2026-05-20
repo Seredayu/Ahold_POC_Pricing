@@ -9,6 +9,7 @@
 
 import dlt
 import datetime
+from decimal import Decimal
 from pyspark.sql.types import (
     StructType, StructField,
     StringType, DecimalType, TimestampType
@@ -52,7 +53,7 @@ def _synthetic_stock():
     stocks = [17, 8, 24, 12, 31, 11, 14, 19, 22, 16, 18, 28]
     rows = [
         ("100", f"SKU-{i:03d}", "BE01", "0001",
-         float(s), 0.0, 0.0, "ST", "I", now, now)
+         Decimal(str(s)), Decimal("0.0"), Decimal("0.0"), "ST", "I", now, now)
         for i, s in enumerate(stocks, start=1)
     ]
     return spark.createDataFrame(rows, schema=STOCK_SCHEMA)
@@ -65,7 +66,7 @@ def _synthetic_sled():
     rows = [
         ("100", "BE01", "001", f"BIN-{i:04d}", f"SKU-{i:03d}", "BE01",
          (datetime.date.today() + datetime.timedelta(hours=h)).strftime("%Y%m%d"),
-         float(s), "ST", "I", now, now)
+         Decimal(str(s)), "ST", "I", now, now)
         for i, (h, s) in enumerate(zip(shelf_hours, stocks), start=1)
     ]
     return spark.createDataFrame(rows, schema=SLED_SCHEMA)
