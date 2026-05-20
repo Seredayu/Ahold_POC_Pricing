@@ -10,15 +10,37 @@ const PORT = process.env.PORT || 3001
 // Phase 2B: set BTP_ENABLED=true to route through SAP BTP Cloud Connector.
 // Requires all BTP_* env vars (see btp-client.js).
 // Default false = Phase 2A mock behaviour preserved.
-const BTP_ENABLED = process.env.BTP_ENABLED === 'true'
+const BTP_ENABLED        = process.env.BTP_ENABLED === 'true'
+const DATABRICKS_ENABLED = process.env.DATABRICKS_ENABLED === 'true'
 
 if (BTP_ENABLED) {
   console.log('SAP BTP write-back ENABLED — routing through BAPI_PRICES_CONDITIONS')
 } else {
   console.log('SAP BTP write-back DISABLED — mock ZMKD responses active')
 }
+if (DATABRICKS_ENABLED) {
+  console.log('Databricks items feed ENABLED — querying ahold_poc.gold.recommended_price')
+} else {
+  console.log('Databricks items feed DISABLED — mock items active')
+}
 
-// Lazy-load BTP client only when enabled (avoids import errors when env vars absent)
+// Lazy-load clients only when enabled (avoids import errors when env vars absent)
+let _databricksClient = null
+async function getDatabricksClient() {
+  if (!_databricksClient) {
+    _databricksClient = await import('./databricks-client.js')
+  }
+  return _databricksClient
+}
+
+const MOCK_ITEMS = [
+  { item: { item_id: 'SKU-001', name_fr: 'Fraises biologiques 500g',      name_nl: 'Biologische aardbeien 500g',        current_price: 3.49, stock: 17, hours_to_close: 6, sales_velocity_7d: 4.2 }, rec: { discount_pct: 0.30, recommended_price: 2.44, confidence: 0.89, manager_required: false } },
+  { item: { item_id: 'SKU-002', name_fr: 'Poulet rôti Label Rouge 1.2kg', name_nl: 'Geroosterde kip Label Rouge 1.2kg', current_price: 9.99, stock:  8, hours_to_close: 3, sales_velocity_7d: 2.8 }, rec: { discount_pct: 0.40, recommended_price: 5.99, confidence: 0.97, manager_required: false } },
+  { item: { item_id: 'SKU-003', name_fr: 'Croissants beurre x6',          name_nl: 'Boter croissants x6',               current_price: 2.89, stock: 24, hours_to_close: 5, sales_velocity_7d: 9.1 }, rec: { discount_pct: 0.30, recommended_price: 2.02, confidence: 0.92, manager_required: false } },
+  { item: { item_id: 'SKU-004', name_fr: 'Saumon fumé 200g',              name_nl: 'Gerookte zalm 200g',                current_price: 5.99, stock: 12, hours_to_close: 7, sales_velocity_7d: 3.4 }, rec: { discount_pct: 0.20, recommended_price: 4.79, confidence: 0.79, manager_required: false } },
+  { item: { item_id: 'SKU-005', name_fr: 'Pain de campagne 400g',         name_nl: 'Boerenbrood 400g',                  current_price: 2.49, stock: 31, hours_to_close: 4, sales_velocity_7d: 11.6 }, rec: { discount_pct: 0.30, recommended_price: 1.74, confidence: 0.91, manager_required: false } },
+]
+
 let _btpClient = null
 async function getBtpClient() {
   if (!_btpClient) {
@@ -39,6 +61,21 @@ function isoDate(offsetDays = 0) {
   d.setDate(d.getDate() + offsetDays)
   return d.toISOString().split('T')[0]
 }
+
+app.get('/api/items', async (req, res) => {
+  if (!DATABRICKS_ENABLED) {
+    return res.json(MOCK_ITEMS)
+  }
+  try {
+    const { fetchRecommendations } = await getDatabricksClient()
+    const store_id = req.query.store_id || 'BE01'
+    const items = await fetchRecommendations(store_id)
+    res.json(items)
+  } catch (err) {
+    console.error('Databricks query error:', err.message)
+    res.status(502).json({ error: 'databricks_error', message: err.message })
+  }
+})
 
 app.post('/api/approve', async (req, res) => {
   const { item_id, discount_pct, manager_override = false, store_id = 'BE01' } = req.body
