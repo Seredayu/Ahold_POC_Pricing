@@ -70,9 +70,9 @@ def _from_sap(batch_date: str):
 
 
 @dlt.table(
-    name="konv_pricing",
+    name="bronze_konv_pricing",
     comment="Bronze: KONV pricing conditions from SAP ECC 6.0 via BODS RFC/ODP"
 )
-def konv_pricing():
+def bronze_konv_pricing():
     batch_date = datetime.date.today().isoformat()
     return _synthetic(batch_date) if USE_SYNTHETIC else _from_sap(batch_date)

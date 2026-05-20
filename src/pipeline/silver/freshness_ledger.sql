@@ -10,7 +10,7 @@
 -- COMMAND ----------
 
 -- Latest expiry per SKU + store
-CREATE OR REFRESH LIVE VIEW sled_latest AS
+CREATE LIVE VIEW sled_latest AS
 SELECT
     s.MATNR                                                         AS item_id,
     s.WERKS                                                         AS store_id,
@@ -18,28 +18,28 @@ SELECT
     DATEDIFF(HOUR, current_timestamp(),
         to_timestamp(MIN(s.VFDAT), 'yyyyMMdd'))                    AS shelf_life_hours,
     MAX(s._cdc_ts)                                                  AS last_sled_update
-FROM LIVE.sled_records s
+FROM LIVE.bronze_sled_records s
 WHERE s._cdc_op != 'D'
 GROUP BY s.MATNR, s.WERKS;
 
 -- COMMAND ----------
 
 -- Current unrestricted stock per SKU + store
-CREATE OR REFRESH LIVE VIEW stock_current AS
+CREATE LIVE VIEW stock_current AS
 SELECT
     m.MATNR                 AS item_id,
     m.WERKS                 AS store_id,
     SUM(m.LABST)            AS stock_qty,
     m.MEINH                 AS uom,
     MAX(m._cdc_ts)          AS last_stock_update
-FROM LIVE.stock_movements m
+FROM LIVE.bronze_stock_movements m
 WHERE m._cdc_op != 'D'
 GROUP BY m.MATNR, m.WERKS, m.MEINH;
 
 -- COMMAND ----------
 
 -- Rolling 7d average price per SKU + store (base price PR00 only)
-CREATE OR REFRESH LIVE VIEW pricing_history AS
+CREATE LIVE VIEW pricing_history AS
 SELECT
     k.MATNR                             AS item_id,
     k.WERKS                             AS store_id,
@@ -54,7 +54,7 @@ GROUP BY k.MATNR, k.WERKS;
 
 -- Freshness Ledger: main Silver table
 -- Feature schema FROZEN — must match Phase 2A FEATURE_COLS in inference.py
-CREATE OR REFRESH LIVE TABLE freshness_ledger
+CREATE OR REFRESH LIVE TABLE silver_freshness_ledger
 COMMENT "Per-SKU per-store freshness snapshot. Feature schema frozen."
 TBLPROPERTIES (
     "quality" = "silver",
@@ -106,7 +106,7 @@ LEFT JOIN (
                PARTITION BY MATNR, WERKS
                ORDER BY CAST(_batch_date AS DATE) DESC
            ) AS rn
-    FROM LIVE.konv_pricing
+    FROM LIVE.bronze_konv_pricing
     WHERE KSCHL = 'PR00'
 ) k ON sl.item_id = k.MATNR AND sl.store_id = k.WERKS AND k.rn = 1
 

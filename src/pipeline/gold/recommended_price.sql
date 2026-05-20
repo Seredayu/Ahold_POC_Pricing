@@ -15,7 +15,7 @@
 -- COMMAND ----------
 
 -- Expiry risk score (M2 approximation via decision table until Model Serving deployed)
-CREATE OR REFRESH LIVE VIEW m2_scores AS
+CREATE LIVE VIEW m2_scores AS
 SELECT
     fl.item_id,
     fl.store_id,
@@ -39,13 +39,13 @@ SELECT
         ELSE 0.20
     END                         AS expiry_risk
 
-FROM LIVE.freshness_ledger fl
+FROM LIVE.silver_freshness_ledger fl
 WHERE fl.shelf_life_hours < 8;
 
 -- COMMAND ----------
 
 -- Discount % recommendation (M3 approximation via decision table)
-CREATE OR REFRESH LIVE VIEW m3_scores AS
+CREATE LIVE VIEW m3_scores AS
 SELECT
     m2.item_id,
     m2.store_id,

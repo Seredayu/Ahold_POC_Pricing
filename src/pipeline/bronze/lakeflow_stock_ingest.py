@@ -72,10 +72,10 @@ def _synthetic_sled():
 
 
 @dlt.table(
-    name="stock_movements",
+    name="bronze_stock_movements",
     comment="Bronze: MM-IM stock levels per SKU/store from SAP MARD via Lakeflow CDC"
 )
-def stock_movements():
+def bronze_stock_movements():
     if USE_SYNTHETIC:
         return _synthetic_stock()
     return (
@@ -91,10 +91,10 @@ def stock_movements():
 
 
 @dlt.table(
-    name="sled_records",
+    name="bronze_sled_records",
     comment="Bronze: EWM shelf-life expiry dates per SKU/bin from SAP LQUA via Lakeflow CDC"
 )
-def sled_records():
+def bronze_sled_records():
     if USE_SYNTHETIC:
         return _synthetic_sled()
     return (
