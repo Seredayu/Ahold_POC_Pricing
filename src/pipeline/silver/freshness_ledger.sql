@@ -10,7 +10,7 @@
 -- COMMAND ----------
 
 -- Latest expiry per SKU + store
-CREATE LIVE VIEW sled_latest AS
+CREATE TEMPORARY LIVE VIEW sled_latest AS
 SELECT
     s.MATNR                                                         AS item_id,
     s.WERKS                                                         AS store_id,
@@ -25,7 +25,7 @@ GROUP BY s.MATNR, s.WERKS;
 -- COMMAND ----------
 
 -- Current unrestricted stock per SKU + store
-CREATE LIVE VIEW stock_current AS
+CREATE TEMPORARY LIVE VIEW stock_current AS
 SELECT
     m.MATNR                 AS item_id,
     m.WERKS                 AS store_id,
@@ -39,13 +39,13 @@ GROUP BY m.MATNR, m.WERKS, m.MEINH;
 -- COMMAND ----------
 
 -- Rolling 7d average price per SKU + store (base price PR00 only)
-CREATE LIVE VIEW pricing_history AS
+CREATE TEMPORARY LIVE VIEW pricing_history AS
 SELECT
     k.MATNR                             AS item_id,
     k.WERKS                             AS store_id,
     AVG(CAST(k.KBETR AS DOUBLE))        AS price_history_mean,
     MAX(CAST(k._batch_date AS DATE))    AS last_price_update
-FROM LIVE.konv_pricing k
+FROM LIVE.bronze_konv_pricing k
 WHERE k.KSCHL = 'PR00'
   AND CAST(k._batch_date AS DATE) >= DATE_SUB(current_date(), 7)
 GROUP BY k.MATNR, k.WERKS;
