@@ -1,4 +1,4 @@
--- Databricks DLT notebook source
+-- Databricks notebook source
 -- Silver layer: Freshness Ledger
 --
 -- Joins Bronze SLED expiry dates + MM-IM stock levels + KONV pricing history

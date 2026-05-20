@@ -1,4 +1,4 @@
--- Databricks DLT notebook source
+-- Databricks notebook source
 -- Gold layer: Recommended Price Table
 --
 -- Calls Databricks Model Serving (M2 + M3) via SQL AI_QUERY function.
