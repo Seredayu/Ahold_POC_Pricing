@@ -28,6 +28,10 @@ const strings = {
     detailExpiry: 'Expiration',
     detailAI: 'Confiance IA',
     langToggle: 'NL',
+    uploadBtn: 'Importer',
+    uploading: 'Importation…',
+    uploadSuccess: (n) => `${n} articles chargés.`,
+    uploadError: 'Échec de l\'importation.',
   },
   nl: {
     appTitle: 'Verse Prijzen',
@@ -55,6 +59,10 @@ const strings = {
     detailExpiry: 'Vervaldatum',
     detailAI: 'IA betrouwbaarheid',
     langToggle: 'FR',
+    uploadBtn: 'Importeren',
+    uploading: 'Importeren…',
+    uploadSuccess: (n) => `${n} artikelen geladen.`,
+    uploadError: 'Importeren mislukt.',
   },
 }
 

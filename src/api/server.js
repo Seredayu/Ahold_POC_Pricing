@@ -1,9 +1,13 @@
 import express from 'express'
 import cors from 'cors'
+import multer from 'multer'
+import * as XLSX from 'xlsx'
 
 const app = express()
 app.use(cors())
 app.use(express.json())
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } })
 
 const PORT = process.env.PORT || 3001
 
@@ -52,6 +56,29 @@ async function getBtpClient() {
 // Track approved items for idempotency (in-memory; Redis in production)
 const approved = new Set()
 
+function shelfLifeHours(expiry_date) {
+  const expiry = new Date(expiry_date)
+  expiry.setHours(23, 59, 59, 999)
+  return Math.max(0, Math.round((expiry - Date.now()) / 3_600_000))
+}
+
+function applyDecisionTable(current_price, hours_to_close) {
+  const expiry_risk =
+    hours_to_close < 24 ? 0.95 :
+    hours_to_close < 48 ? 0.75 :
+    hours_to_close < 72 ? 0.55 : 0.20
+  const raw = expiry_risk >= 0.90 ? 0.40 : expiry_risk >= 0.70 ? 0.30 : expiry_risk >= 0.50 ? 0.20 : 0.05
+  const discount_pct = Math.min(Math.max(raw, 0), 0.5)
+  return {
+    expiry_risk,
+    discount_pct,
+    recommended_price: Math.round(current_price * (1 - discount_pct) * 100) / 100,
+    confidence:        Math.min(+(0.60 + expiry_risk * 0.39).toFixed(2), 0.99),
+    manager_required:  raw > 0.5,
+    recommended:       discount_pct >= 0.05,
+  }
+}
+
 function zmkdConditionRecord() {
   return String(Math.floor(Math.random() * 9_000_000_000) + 1_000_000_000).padStart(10, '0')
 }
@@ -75,6 +102,57 @@ app.get('/api/items', async (req, res) => {
     console.error('Databricks query error:', err.message)
     res.status(502).json({ error: 'databricks_error', message: err.message })
   }
+})
+
+app.post('/api/upload-skus', upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'file_required' })
+
+  let rows
+  try {
+    const wb = XLSX.read(req.file.buffer)
+    rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]])
+  } catch {
+    return res.status(400).json({ error: 'invalid_file' })
+  }
+  if (!rows.length) return res.status(400).json({ error: 'empty_file' })
+
+  const store_id = String(req.body?.store_id || 'BE01').replace(/[^A-Z0-9]/gi, '')
+
+  const enriched = rows.map(row => {
+    const hours_to_close = shelfLifeHours(row.expiry_date)
+    return {
+      item_id:          String(row.item_id),
+      name_fr:          String(row.name_fr || row.item_id),
+      name_nl:          String(row.name_nl || row.item_id),
+      current_price:    Number(row.current_price),
+      stock:            Number(row.stock),
+      hours_to_close,
+      sales_velocity_7d: Number(row.sales_velocity_7d || 5.0),
+      store_id,
+      ...applyDecisionTable(Number(row.current_price), hours_to_close),
+    }
+  })
+
+  if (DATABRICKS_ENABLED) {
+    try {
+      const { writeManualUpload } = await getDatabricksClient()
+      await writeManualUpload(store_id, enriched)
+    } catch (err) {
+      console.error('Databricks write error:', err.message)
+      // Non-fatal — still return computed items to client
+    }
+  }
+
+  res.json({
+    uploaded: enriched.length,
+    items: enriched.map(r => ({
+      item: { item_id: r.item_id, name_fr: r.name_fr, name_nl: r.name_nl,
+              current_price: r.current_price, stock: r.stock,
+              hours_to_close: r.hours_to_close, sales_velocity_7d: r.sales_velocity_7d },
+      rec:  { discount_pct: r.discount_pct, recommended_price: r.recommended_price,
+              confidence: r.confidence, manager_required: r.manager_required },
+    })),
+  })
 })
 
 app.post('/api/approve', async (req, res) => {

@@ -1,0 +1,13 @@
+item_id,name_fr,name_nl,current_price,stock,expiry_date,sales_velocity_7d
+SKU-001,Fraises biologiques 500g,Biologische aardbeien 500g,3.49,17,2026-05-20,4.2
+SKU-002,Poulet rôti Label Rouge 1.2kg,Geroosterde kip Label Rouge 1.2kg,9.99,8,2026-05-20,2.8
+SKU-003,Croissants beurre x6,Boter croissants x6,2.89,24,2026-05-20,9.1
+SKU-004,Saumon fumé 200g,Gerookte zalm 200g,5.99,12,2026-05-21,3.4
+SKU-005,Pain de campagne 400g,Boerenbrood 400g,2.49,31,2026-05-21,11.6
+SKU-006,Fromage de chèvre frais 150g,Verse geitenkaas 150g,4.29,9,2026-05-21,5.0
+SKU-007,Tarte aux pommes 400g,Appeltaart 400g,3.99,14,2026-05-22,6.3
+SKU-008,Yaourt grec 500g,Griekse yoghurt 500g,2.19,22,2026-05-22,8.7
+SKU-009,Pâté de campagne 200g,Boerenpaté 200g,3.79,11,2026-05-22,3.1
+SKU-010,Baguette tradition,Traditioneel stokbrood,1.89,28,2026-05-23,14.2
+SKU-011,Salade de fruits frais 400g,Verse fruitsalade 400g,4.49,16,2026-05-23,5.8
+SKU-012,Charcuterie artisanale 150g,Ambachtelijke vleeswaren 150g,5.49,7,2026-05-23,2.3

@@ -27,6 +27,14 @@ export async function postApprove(item_id, discount_pct, manager_override = fals
   return data
 }
 
+export async function uploadSkus(file) {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await fetch(`${BASE}/upload-skus`, { method: 'POST', body: form })
+  if (!res.ok) throw new Error(`${res.status}`)
+  return res.json()
+}
+
 export async function postReject(item_id, reason_code = 'associate_judgement') {
   const res = await fetch(`${BASE}/reject`, {
     method: 'POST',

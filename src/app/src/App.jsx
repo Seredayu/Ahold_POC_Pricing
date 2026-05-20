@@ -3,7 +3,7 @@ import RecommendationCard from './components/RecommendationCard'
 import ConfirmationBanner from './components/ConfirmationBanner'
 import EmptyState from './components/EmptyState'
 import ErrorState from './components/ErrorState'
-import { fetchItems, postApprove, postReject } from './lib/api'
+import { fetchItems, postApprove, postReject, uploadSkus } from './lib/api'
 import strings from './lib/i18n'
 
 export default function App() {
@@ -12,6 +12,7 @@ export default function App() {
 
   const [queue, setQueue] = useState([])
   const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
   const [dismissed, setDismissed] = useState(new Set())
   const [banner, setBanner] = useState(null)
   const [error, setError] = useState(false)
@@ -77,6 +78,24 @@ export default function App() {
     setBanner(null)
   }
 
+  async function handleUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setUploading(true)
+    try {
+      const data = await uploadSkus(file)
+      setQueue(data.items)
+      setDismissed(new Set())
+      setBanner({ message: t.uploadSuccess(data.uploaded), sub: null })
+      setError(false)
+    } catch {
+      setBanner({ message: t.uploadError, sub: null })
+    } finally {
+      setUploading(false)
+    }
+  }
+
   function handleRetry() {
     setError(false)
     setDismissed(new Set())
@@ -96,6 +115,12 @@ export default function App() {
               Offline
             </span>
           )}
+          <label className="cursor-pointer">
+            <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleUpload} disabled={uploading} />
+            <span className="text-xs font-semibold text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg transition-colors select-none">
+              {uploading ? t.uploading : t.uploadBtn}
+            </span>
+          </label>
           <button
             onClick={() => setLang(l => l === 'fr' ? 'nl' : 'fr')}
             className="text-xs font-semibold text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg transition-colors"

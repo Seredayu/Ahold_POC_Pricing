@@ -30,28 +30,16 @@ async function ensureSession() {
   return _session
 }
 
-export async function fetchRecommendations(store_id = 'BE01') {
-  const session = await ensureSession()
-  const op = await session.executeStatement(`
-    SELECT item_id, current_price, stock, hours_to_close,
-           sales_velocity_7d, discount_pct, recommended_price,
-           confidence, manager_required
-    FROM   ahold_poc.gold.recommended_price
-    WHERE  store_id        = '${store_id.replace(/[^A-Z0-9]/gi, '')}'
-      AND  recommended     = true
-    ORDER  BY discount_pct DESC
-  `)
-  const rows = await op.fetchAll()
-  await op.close()
-
-  return rows.map(row => ({
+function toItemRec(row, names) {
+  return {
     item: {
-      item_id:          row.item_id,
-      current_price:    Number(row.current_price),
-      stock:            Number(row.stock),
-      hours_to_close:   Number(row.hours_to_close),
+      item_id:           row.item_id,
+      name_fr:           row.name_fr  ?? names?.name_fr ?? row.item_id,
+      name_nl:           row.name_nl  ?? names?.name_nl ?? row.item_id,
+      current_price:     Number(row.current_price),
+      stock:             Number(row.stock),
+      hours_to_close:    Number(row.hours_to_close),
       sales_velocity_7d: Number(row.sales_velocity_7d),
-      ...(SKU_NAMES[row.item_id] ?? { name_fr: row.item_id, name_nl: row.item_id }),
     },
     rec: {
       discount_pct:      Number(row.discount_pct),
@@ -59,5 +47,81 @@ export async function fetchRecommendations(store_id = 'BE01') {
       confidence:        Number(row.confidence),
       manager_required:  Boolean(row.manager_required),
     },
-  }))
+  }
+}
+
+export async function fetchRecommendations(store_id = 'BE01') {
+  const sid = store_id.replace(/[^A-Z0-9]/gi, '')
+  const session = await ensureSession()
+
+  // Prefer today's manual uploads over DLT Gold
+  let uploadCount = 0
+  try {
+    const cntOp = await session.executeStatement(
+      `SELECT COUNT(*) AS cnt FROM ahold_poc.gold.manual_upload WHERE store_id = '${sid}' AND upload_date = current_date()`
+    )
+    const cntRows = await cntOp.fetchAll()
+    await cntOp.close()
+    uploadCount = Number(cntRows[0]?.cnt ?? 0)
+  } catch { /* table not created yet */ }
+
+  if (uploadCount > 0) {
+    const op = await session.executeStatement(`
+      SELECT item_id, name_fr, name_nl, current_price, stock, hours_to_close,
+             sales_velocity_7d, discount_pct, recommended_price, confidence, manager_required
+      FROM   ahold_poc.gold.manual_upload
+      WHERE  store_id = '${sid}' AND upload_date = current_date()
+      ORDER  BY discount_pct DESC
+    `)
+    const rows = await op.fetchAll()
+    await op.close()
+    return rows.map(r => toItemRec(r, null))
+  }
+
+  const op = await session.executeStatement(`
+    SELECT item_id, current_price, stock, hours_to_close,
+           sales_velocity_7d, discount_pct, recommended_price,
+           confidence, manager_required
+    FROM   ahold_poc.gold.recommended_price
+    WHERE  store_id    = '${sid}'
+      AND  recommended = true
+    ORDER  BY discount_pct DESC
+  `)
+  const rows = await op.fetchAll()
+  await op.close()
+  return rows.map(r => toItemRec(r, SKU_NAMES[r.item_id]))
+}
+
+export async function writeManualUpload(store_id, items) {
+  const session = await ensureSession()
+  const sid = store_id.replace(/[^A-Z0-9]/gi, '')
+
+  const ddlOp = await session.executeStatement(`
+    CREATE TABLE IF NOT EXISTS ahold_poc.gold.manual_upload (
+      item_id STRING, store_id STRING, name_fr STRING, name_nl STRING,
+      current_price DOUBLE, stock DOUBLE, hours_to_close DOUBLE, sales_velocity_7d DOUBLE,
+      expiry_risk DOUBLE, discount_pct DOUBLE, recommended_price DOUBLE,
+      confidence DOUBLE, manager_required BOOLEAN, recommended BOOLEAN,
+      upload_ts TIMESTAMP, upload_date DATE
+    )
+  `)
+  await ddlOp.close()
+
+  const delOp = await session.executeStatement(
+    `DELETE FROM ahold_poc.gold.manual_upload WHERE store_id = '${sid}' AND upload_date = current_date()`
+  )
+  await delOp.close()
+
+  const esc = s => String(s).replace(/'/g, "''")
+  const vals = items.map(r =>
+    `('${esc(r.item_id)}','${sid}','${esc(r.name_fr)}','${esc(r.name_nl)}',` +
+    `${r.current_price},${r.stock},${r.hours_to_close},${r.sales_velocity_7d},` +
+    `${r.expiry_risk},${r.discount_pct},${r.recommended_price},${r.confidence},` +
+    `${r.manager_required},${r.recommended},current_timestamp(),current_date())`
+  ).join(',')
+
+  const insOp = await session.executeStatement(
+    `INSERT INTO ahold_poc.gold.manual_upload VALUES ${vals}`
+  )
+  await insOp.close()
 }
