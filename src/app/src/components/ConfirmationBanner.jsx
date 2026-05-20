@@ -24,7 +24,7 @@ export default function ConfirmationBanner({ message, subMessage, onUndo, t }) {
         {undoActive && onUndo && (
           <button
             onClick={onUndo}
-            className="shrink-0 text-green-100 hover:text-white text-sm font-semibold underline"
+            className="shrink-0 text-white hover:text-green-100 text-sm font-semibold underline underline-offset-2"
           >
             {t.undo}
           </button>

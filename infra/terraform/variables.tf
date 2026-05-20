@@ -21,6 +21,12 @@ variable "location" {
   default     = "westeurope"
 }
 
+variable "aca_location" {
+  description = "Azure region for Container App Environment (may differ from main location due to per-region quota)"
+  type        = string
+  default     = "northeurope"
+}
+
 variable "bff_image" {
   description = "Container image for Node.js BFF (e.g. ghcr.io/org/bff:latest)"
   type        = string

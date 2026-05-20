@@ -97,6 +97,16 @@ SAP RFC access available 2026-05-29. Target: 5 pilot stores, Brooks region, Bake
 | `wiki/architecture/data-models.md` | Item/Recommendation interfaces, feature schema |
 | `docs/superpowers/plans/implementation-plan.md` | 3-phase roadmap + pre-build checklist |
 
+## Documentation
+
+When making significant architecture, technology, or integration decisions:
+
+1. Add an ADR entry to `docs/decisions.md` (format: ADR-NNN, date, status, decision, rationale).
+2. Update `wiki/architecture/` if the data flow, data model, or phase comparison table changes.
+3. Update the Key files table in this file if a new file becomes load-bearing.
+
+Do not commit phase transitions, integration changes, or frozen-schema modifications without updating docs.
+
 ## Constraints
 
 - **Feature schema frozen** — `decisionTable.js` feature fields must stay identical across Phase 1 (Python dict), 2A (FastAPI), 2B (Databricks Feature Store). Do not add/rename fields without updating all three.

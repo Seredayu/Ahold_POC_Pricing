@@ -14,6 +14,6 @@ output "datalake_storage_account" {
 }
 
 output "dlt_pipeline_id" {
-  description = "Databricks DLT pipeline ID (use in job trigger)"
-  value       = databricks_pipeline.freshness.id
+  description = "Databricks DLT pipeline ID — set after Unity Catalog metastore configured"
+  value       = "not-yet-created"
 }

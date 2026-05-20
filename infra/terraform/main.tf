@@ -50,7 +50,7 @@ resource "azurerm_databricks_workspace" "this" {
   sku                 = "premium"
 
   custom_parameters {
-    storage_account_name          = "dbwstore${var.project_name}"
+    storage_account_name          = "dbwstore${replace(var.project_name, "-", "")}"
     storage_account_sku_name      = "Standard_LRS"
     virtual_network_id            = azurerm_virtual_network.this.id
     private_subnet_name           = azurerm_subnet.dbw_private.name
@@ -117,6 +117,16 @@ resource "azurerm_subnet" "aca" {
   resource_group_name  = azurerm_resource_group.this.name
   virtual_network_name = azurerm_virtual_network.this.name
   address_prefixes     = ["10.0.3.0/24"]
+
+  delegation {
+    name = "aca-del"
+    service_delegation {
+      name = "Microsoft.App/environments"
+      actions = [
+        "Microsoft.Network/virtualNetworks/subnets/join/action",
+      ]
+    }
+  }
 }
 
 resource "azurerm_network_security_group" "dbw" {
@@ -161,17 +171,14 @@ resource "azurerm_storage_container" "unity_catalog" {
 # Azure Container Apps — Node.js BFF (Phase 2B)
 # ---------------------------------------------------------------------------
 
-resource "azurerm_container_app_environment" "this" {
-  name                       = "cae-${var.project_name}-${var.environment}"
-  location                   = azurerm_resource_group.this.location
-  resource_group_name        = azurerm_resource_group.this.name
-  infrastructure_subnet_id   = azurerm_subnet.aca.id
-  tags                       = local.tags
+data "azurerm_container_app_environment" "this" {
+  name                = "ahpoc-cae"
+  resource_group_name = "rg-ahold-freshness-poc"
 }
 
 resource "azurerm_container_app" "bff" {
   name                         = "ca-bff-${var.environment}"
-  container_app_environment_id = azurerm_container_app_environment.this.id
+  container_app_environment_id = data.azurerm_container_app_environment.this.id
   resource_group_name          = azurerm_resource_group.this.name
   revision_mode                = "Single"
   tags                         = local.tags
@@ -234,59 +241,15 @@ resource "azurerm_container_app" "bff" {
 
 # ---------------------------------------------------------------------------
 # Databricks resources (Unity Catalog + DLT pipeline)
+# Requires Unity Catalog metastore setup in Databricks Account Console first.
+# Steps: https://docs.databricks.com/en/data-governance/unity-catalog/get-started.html
+# Re-enable after metastore is configured and linked to this workspace.
 # ---------------------------------------------------------------------------
 
-resource "databricks_catalog" "ahold_poc" {
-  name    = "ahold_poc"
-  comment = "Ahold Delhaize Dynamic Freshness Pricing POC"
-  depends_on = [azurerm_databricks_workspace.this]
-}
-
-resource "databricks_schema" "bronze" {
-  catalog_name = databricks_catalog.ahold_poc.name
-  name         = "bronze"
-}
-
-resource "databricks_schema" "silver" {
-  catalog_name = databricks_catalog.ahold_poc.name
-  name         = "silver"
-}
-
-resource "databricks_schema" "gold" {
-  catalog_name = databricks_catalog.ahold_poc.name
-  name         = "gold"
-}
-
-resource "databricks_pipeline" "freshness" {
-  name    = "freshness-medallion-${var.environment}"
-  target  = "${databricks_catalog.ahold_poc.name}.gold"
-  channel = "CURRENT"
-
-  cluster {
-    label       = "default"
-    num_workers = 2
-    spark_conf = {
-      "spark.databricks.sap.host"   = var.sap_host
-      "spark.databricks.sap.client" = var.sap_client
-      "spark.databricks.sap.sysnr"  = var.sap_sysnr
-    }
-  }
-
-  library {
-    notebook { path = "/Repos/ahold-poc/src/pipeline/bronze/bods_konv_ingest" }
-  }
-  library {
-    notebook { path = "/Repos/ahold-poc/src/pipeline/bronze/lakeflow_stock_ingest" }
-  }
-  library {
-    notebook { path = "/Repos/ahold-poc/src/pipeline/silver/freshness_ledger" }
-  }
-  library {
-    notebook { path = "/Repos/ahold-poc/src/pipeline/gold/recommended_price" }
-  }
-
-  continuous = false  # batch mode; trigger via job schedule at 05:30
-}
+# resource "databricks_catalog" "ahold_poc" { ... }
+# resource "databricks_schema" "bronze/silver/gold" { ... }
+# resource "databricks_pipeline" "freshness" { ... }
+# Uncomment after running: infra/databricks/setup-unity-catalog.md
 
 # ---------------------------------------------------------------------------
 # Locals

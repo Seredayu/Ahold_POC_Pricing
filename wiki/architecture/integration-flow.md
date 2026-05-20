@@ -73,3 +73,26 @@ SAP ECC 6.0 (MM-IM / KONV)
 | API | Express mock BFF | FastAPI on Railway | Node.js BFF on Azure Container Apps |
 | Write-back | Mock ZMKD JSON | Mock ZMKD JSON | Real BAPI_PRICES_CONDITIONS via BTP |
 | Frontend | Vercel | Vercel | Azure Static Web Apps |
+
+## Phase 2B Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/pipeline/bronze/bods_konv_ingest.py` | KONV BODS RFC/ODP -> Bronze Delta table |
+| `src/pipeline/bronze/lakeflow_stock_ingest.py` | MM-IM + EWM CDC -> Bronze streaming tables |
+| `src/pipeline/silver/freshness_ledger.sql` | DLT: join + derive 6 frozen features |
+| `src/pipeline/gold/recommended_price.sql` | DLT: AI_QUERY M2+M3 -> recommendations |
+| `src/api/btp-client.js` | BAPI_PRICES_CONDITIONS RFC wrapper |
+| `src/api/server.js` | BFF with BTP_ENABLED gate (false=mock, true=real) |
+| `infra/terraform/main.tf` | Databricks workspace + ADLS Gen2 + ACA |
+| `infra/btp/cloud-connector-config.json` | Cloud Connector setup guide |
+
+## Activation Checklist (2026-05-29)
+
+1. Set `USE_SYNTHETIC = False` in `bods_konv_ingest.py` and `lakeflow_stock_ingest.py`
+2. Configure SAP BTP Cloud Connector (see `infra/btp/cloud-connector-config.json`)
+3. Run `terraform apply` in `infra/terraform/`
+4. Set `BTP_ENABLED=true` in Azure Container Apps environment
+5. Set BTP_CLIENT_ID + BTP_CLIENT_SECRET in ACA secrets
+6. Trigger DLT pipeline: `databricks pipelines start --pipeline-id <id>`
+7. Verify ZMKD record created in SAP A004 via transaction VK13

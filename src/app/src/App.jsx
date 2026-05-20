@@ -86,8 +86,6 @@ export default function App() {
       .catch(() => { setError(true); setLoading(false) })
   }
 
-  const visibleQueue = queue.filter(({ item }) => !dismissed.has(item.item_id))
-
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
